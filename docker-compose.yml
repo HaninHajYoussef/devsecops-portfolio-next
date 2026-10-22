@@ -1,0 +1,16 @@
+services:
+  api:
+    build: ./api
+    image: devsecops-api
+    ports:
+      - "4000:4000"
+
+  frontend:
+    build: .
+    image: devsecops-portfolio
+    ports:
+      - "3000:3000"
+    environment:
+      - API_URL=http://api:4000
+    depends_on:
+      - api
