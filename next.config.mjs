@@ -1,8 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  /* config options here */
-  cacheComponents: true,
-  partialPrefetching: true,
+  cacheComponents: false,
+  output: 'standalone',
+  allowedDevOrigins: ['192.168.56.101'],
 };
 
 export default nextConfig;
