@@ -34,7 +34,7 @@ app.get('/api/skills', (req, res) => res.json(skills));
 // Étape 51 : rate limiting (5 requêtes par minute et par IP)
 const contactLimiter = rateLimit({
   windowMs: 60 * 1000,
-  limit: 5,
+  limit: Number(process.env.RATE_LIMIT_MAX) || 5,
   standardHeaders: 'draft-7',
   legacyHeaders: false,
   message: { error: 'Trop de requêtes, réessayez plus tard.' },
