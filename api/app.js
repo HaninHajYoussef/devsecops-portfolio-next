@@ -3,6 +3,7 @@ const cors = require('cors');
 const helmet = require('helmet');
 const { rateLimit } = require('express-rate-limit');
 const { z } = require('zod');
+const prisma = require('./db');
 
 const app = express();
 
@@ -49,7 +50,7 @@ const contactSchema = z
   .strict();
 
 // Étape 46 : route POST /api/contact
-app.post('/api/contact', contactLimiter, (req, res) => {
+app.post('/api/contact', contactLimiter, async (req, res) => {
   const result = contactSchema.safeParse(req.body);
   if (!result.success) {
     return res.status(400).json({
@@ -60,8 +61,8 @@ app.post('/api/contact', contactLimiter, (req, res) => {
       })),
     });
   }
-  console.log('Nouveau message de contact reçu de :', result.data.email);
-  res.status(201).json({ status: 'ok', message: 'Message reçu' });
+  const saved = await prisma.contactMessage.create({ data: result.data });
+  res.status(201).json({ status: 'ok', message: 'Message reçu', id: saved.id });
 });
 
 // Étape 49 : gestion centralisée des erreurs
