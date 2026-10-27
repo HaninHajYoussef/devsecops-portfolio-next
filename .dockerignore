@@ -4,3 +4,4 @@ api
 .git
 .env.local
 captures
+.env
