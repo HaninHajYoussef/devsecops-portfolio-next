@@ -1,0 +1,91 @@
+name: CI DevSecOps
+
+on:
+  push:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  test-frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm test
+
+  test-api:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: api
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: api/package-lock.json
+      - run: npm ci
+      - run: npx prisma generate
+      - run: npm test
+
+  secrets:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  sast:
+    runs-on: ubuntu-latest
+    container:
+      image: semgrep/semgrep
+    steps:
+      - uses: actions/checkout@v4
+      - run: semgrep scan --config p/default --error --exclude node_modules
+
+  dependencies:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: npm audit frontend
+        run: npm audit --audit-level=high
+      - name: npm audit API
+        run: npm audit --audit-level=high
+        working-directory: api
+
+  images:
+    runs-on: ubuntu-latest
+    needs: [test-frontend, test-api]
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: devsecops-portfolio
+            context: .
+          - name: devsecops-api
+            context: api
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build image ${{ matrix.name }}
+        run: docker build -t ${{ matrix.name }}:${{ github.sha }} ${{ matrix.context }}
+      - name: Scan Trivy ${{ matrix.name }}
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: ${{ matrix.name }}:${{ github.sha }}
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          exit-code: 1
